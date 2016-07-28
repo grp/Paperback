@@ -1,0 +1,20 @@
+#
+# Copyright (c) 2016, Grant Paul
+# All rights reserved.
+#
+
+build ${bundle}: copy Paper.app
+
+plist = ${bundle}/Info.plist
+build ${plist}: sh | ${bundle}
+    # Change the bundle identifier to match the entitlements.
+    cmd = plutil -replace "CFBundleIdentifier" -string "com.grantpaul.Paperback" "${plist}"
+    desc = Modify Info.plist
+
+binary = ${bundle}/Paper
+build ${binary}: sh | ${bundle} insert_dylib.py macho.py
+    # Add the load command to load the library.
+    cmd = python insert_dylib.py --input "${binary}" --output "${binary}" --dylib "@executable_path/Paperback.dylib"
+    desc = Add library load command
+
+build bundle: phony ${bundle} ${plist} ${binary}

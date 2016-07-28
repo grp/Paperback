@@ -1,0 +1,39 @@
+#
+# Copyright (c) 2016, Grant Paul
+# All rights reserved.
+#
+
+include rules.ninja
+
+# Build directory.
+builddir = build
+build clean: rm ${builddir}
+
+# Build app bundle.
+bundle = ${builddir}/Paper.app
+subninja bundle.ninja
+
+# Build injected library.
+library = ${bundle}/Paperback.dylib
+subninja library.ninja
+
+# Default build.
+build build: phony bundle library
+default build
+
+# Sign and install.
+identity = $$(echo $$CODE_SIGN_IDENTITY)
+entitlements = Entitlements.xml
+
+build sign-library: codesign ${library} | ${entitlements} build
+    identity = ${identity}
+    entitlements = ${entitlements}
+build sign-bundle: codesign ${bundle} | ${entitlements} build
+    identity = ${identity}
+    entitlements = ${entitlements}
+build sign: phony sign-library sign-bundle
+
+build install: deploy ${bundle} | sign
+    flags = 
+build debug: deploy ${bundle} | sign
+    flags = -d

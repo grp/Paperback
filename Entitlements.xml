@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+        <!-- The app identifier. -->
+        <key>application-identifier</key>
+        <string>XZ7P2T9SKD.com.grantpaul.Paperback</string>
+
+        <!-- Required for debugging. Note this requires a "development" provisioning profile. -->
+        <key>get-task-allow</key>
+        <true/>
+	</dict>
+</plist>

@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2016, Grant Paul
+# All rights reserved.
+#
+
+sdk = iphoneos
+arch = armv7
+deployment_target = 7.0
+
+src = src
+build ${builddir}/Keys.o: cc ${src}/Keys.m
+build ${builddir}/Keychain.o: cc ${src}/Keychain.m
+build ${builddir}/NUX.o: cc ${src}/NUX.m
+build ${builddir}/Feed.o: cc ${src}/Feed.m
+
+build ${library}: link $
+    ${builddir}/Keys.o $
+    ${builddir}/Keychain.o $
+    ${builddir}/NUX.o $
+    ${builddir}/Feed.o
+    type = -dynamiclib
+    libs = $
+        -framework Foundation $
+        -framework UIKit $
+        -framework Security
+
+build library: phony ${library}

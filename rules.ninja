@@ -1,0 +1,60 @@
+#
+# Copyright (c) 2016, Grant Paul
+# All rights reserved.
+#
+
+# Shell.
+
+rule sh
+    command = ${cmd}
+    description = ${desc}
+
+rule copy
+    command = rm -rf "$out" && cp -R "$in" "$out"
+    description = Copy $in to $out
+
+rule rm
+    command = rm -rf "$in"
+    description = Remove $in
+
+
+# Compilation.
+
+cc = xcrun clang
+
+rule cc
+    command = $
+        ${cc} $
+        -MMD -MT "$out" -MF "$out.d" $
+        -arch ${arch} $
+        -isysroot $$(xcrun --sdk ${sdk} --show-sdk-path) $
+        -m${sdk}-version-min=${deployment_target} $
+        ${cflags} $
+        -c "$in" -o "$out"
+    depfile = $out.d
+    description = Compile $in to $out
+
+rule link
+    command = $
+        ${cc} $
+        -arch ${arch} $
+        -isysroot $$(xcrun --sdk ${sdk} --show-sdk-path) $
+        -m${sdk}-version-min=${deployment_target} $
+        ${ldflags} $
+        ${libs} $
+        ${type} $in -o "$out"
+    description = Link $out
+
+
+# Deployment.
+
+rule codesign
+    command = codesign --force --sign "${identity}" --entitlements "${entitlements}" "$in"
+    description = Codesign $in
+    pool = console
+
+rule deploy
+    command = ios-deploy ${flags} -b "$in"
+    description = Deploy $in
+    pool = console
+
