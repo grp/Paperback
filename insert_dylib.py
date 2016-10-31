@@ -10,13 +10,15 @@ import argparse
 import macho
 
 def insert_dylib_macho(contents, dylib, offset=0):
+    initial_offset = offset
+
     big_magic, = struct.unpack_from('>I', contents, offset)
     little_magic, = struct.unpack_from('<I', contents, offset)
 
     if big_magic in { macho.MH_MAGIC, macho.MH_MAGIC_64 }:
         endian = '>'
     elif little_magic in { macho.MH_MAGIC, macho.MH_MAGIC_64 }:
-        endian  = '<' 
+        endian = '<'
     else:
         raise 'Unknown Mach-O magic.'
 
@@ -33,7 +35,7 @@ def insert_dylib_macho(contents, dylib, offset=0):
         offset += header.calcsize()
     else:
         raise 'Unknown Mach-O magic.'
-    
+
     # Find available padding between end of load commands and start of first
     # section or segment. Generally, there should be some added by `-headerpad`.
     first_segment = len(contents)
@@ -82,10 +84,10 @@ def insert_dylib_macho(contents, dylib, offset=0):
             dylib_name = dylib_name[:dylib_name.find('\0')] # Strip padding.
             if dylib_name == dylib:
                 return
-    
+
         offset += command.cmdsize
 
-    available_space = first_segment - offset
+    available_space = first_segment - (offset - initial_offset)
 
     # Padding appears to be required.
     dylib_padded = dylib + ('\0' * ((len(dylib) % 8) + 4))
@@ -115,9 +117,9 @@ def insert_dylib_fat(contents, dylib, offset=0):
     little_magic, = struct.unpack_from('<I', contents, offset)
 
     if big_magic == macho.FAT_MAGIC:
-        endian = '>'
+        endian = '>' # Fat is swapped.
     elif little_magic == macho.FAT_MAGIC:
-        endian = '<'
+        endian = '<' # Fat is swapped.
     else:
         insert_dylib_macho(contents, dylib, offset)
         return
@@ -126,36 +128,12 @@ def insert_dylib_fat(contents, dylib, offset=0):
     fat_header.unpack(endian, contents, offset)
     offset += fat_header.calcsize()
 
-    archs = []
-    archs_contents = []
-
     arch_offset = offset
     for i in range(fat_header.nfat_arch):
         arch = macho.fat_arch()
         arch.unpack(endian, contents, arch_offset)
+        insert_dylib_macho(contents, dylib, arch.offset)
         arch_offset += arch.calcsize()
-
-        archs.append(arch)
-
-        arch_contents = contents[arch.offset:arch.offset + arch.size]
-        arch_adjusted = insert_dylib_macho(arch_contents, dylib)
-        archs_adjusted.append(arch_adjusted)
-
-    arch_adjustment = 0
-
-    arch_offset = offset
-    for arch, arch_contents, arch_adjusted in zip(archs, archs_contents, archs_adjusted):
-        arch_adjustment += len(arch_adjusted) - arch.size
-        contents[arch.offset:arch.offset + arch.size] = arch_adjusted
-
-        arch.offset += arch_adjustment
-        arch.size = len(arch_adjusted)
-
-        contents[arch_offset:arch_offset + arch.calcsize()] = arch.pack(endian)
-        arch_offset += macho.fat_arch.size()
-
-        arch_contents = insert_dylib_macho(arch_contents, dylib)
-        contents[arch_offset:arch_offset + arch_size] = arch_contents
 
 
 def main(argv):
